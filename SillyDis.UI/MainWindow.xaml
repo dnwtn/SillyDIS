@@ -280,7 +280,7 @@
                                                           Command="{Binding TogglePauseCommand}"
                                                           Margin="4,4,4,6" Padding="10,4">
                                                 <ToggleButton.Style>
-                                                    <Style TargetType="ToggleButton" BasedOn="{StaticResource MaterialDesignRaisedToggleButton}">
+                                                    <Style TargetType="ToggleButton" BasedOn="{StaticResource MaterialDesignRaisedButton}">
                                                         <Setter Property="Content" Value="⏸ PAUSE" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsPaused}" Value="True">
@@ -327,6 +327,7 @@
                                     <!-- Capture session sub-tabs: Traffic | Tactical Map -->
                                     <TabControl Grid.Row="1" Background="Transparent"
                                                 BorderBrush="#1E2D45"
+                                                ItemContainerStyle="{StaticResource TacticalTabItemStyle}"
                                                 x:Name="InnerTabControl">
 
                                         <!-- Traffic tab -->
@@ -340,7 +341,7 @@
                                                       Background="{StaticResource BrushBgDeepNavy}"
                                                       SelectionChanged="ListView_SelectionChanged">
                                                 <ListView.View>
-                                                    <GridView>
+                                                    <GridView ColumnHeaderContainerStyle="{StaticResource TacticalGridHeaderStyle}">
                                                         <GridViewColumn Header="TIME" Width="88"
                                                             DisplayMemberBinding="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" />
                                                         <GridViewColumn Header="PDU TYPE" Width="140"

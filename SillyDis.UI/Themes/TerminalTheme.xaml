@@ -80,8 +80,8 @@
         </Style.Triggers>
     </Style>
 
-    <!-- ── GridViewColumnHeader ──────────────────────────────────────── -->
-    <Style TargetType="GridViewColumnHeader">
+    <!-- ── GridViewColumnHeader (explicit key — apply to ListView's ColumnHeaderStyle) ── -->
+    <Style x:Key="TacticalGridHeaderStyle" TargetType="GridViewColumnHeader">
         <Setter Property="Background">
             <Setter.Value><SolidColorBrush Color="#0A0E1A" /></Setter.Value>
         </Setter>
@@ -107,8 +107,8 @@
         <Setter Property="Margin" Value="0,0,0,4" />
     </Style>
 
-    <!-- ── Tab item ───────────────────────────────────────────────────── -->
-    <Style TargetType="TabItem">
+    <!-- ── Tab item (explicit key — apply to TabControl.ItemContainerStyle) ─── -->
+    <Style x:Key="TacticalTabItemStyle" TargetType="TabItem">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}" />
         <Setter Property="FontFamily" Value="Consolas, Cascadia Code, Segoe UI" />
