@@ -1,0 +1,350 @@
+<Window x:Class="SillyDis.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
+        xmlns:viewmodels="clr-namespace:SillyDis.UI.ViewModels"
+        xmlns:scottplot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+        mc:Ignorable="d"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignFont}"
+        Title="SillyDis — IEEE-1278.1 DIS Traffic Inspector" Height="768" Width="1440">
+
+    <materialDesign:DialogHost IsOpen="{Binding IsDialogOpen}">
+        <materialDesign:DialogHost.DialogContent>
+            <StackPanel Margin="20" Width="320">
+                <TextBlock Text="Edit Network Profile"
+                           Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                           Margin="0,0,0,12" />
+                <TextBox materialDesign:HintAssist.Hint="Profile Name"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                         Text="{Binding EditingProfile.Name}" Margin="0,5" />
+                <TextBox materialDesign:HintAssist.Hint="Multicast Address (e.g. 239.1.2.3)"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                         Text="{Binding EditingProfile.MulticastAddress}" Margin="0,5" />
+                <TextBox materialDesign:HintAssist.Hint="UDP Port"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                         Text="{Binding EditingProfile.Port}" Margin="0,5" />
+                <TextBox materialDesign:HintAssist.Hint="Local NIC IP (blank = all interfaces)"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                         Text="{Binding EditingProfile.LocalInterfaceIp}" Margin="0,5" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                    <Button Content="Cancel"
+                            Command="{Binding CancelProfileCommand}"
+                            Style="{StaticResource MaterialDesignFlatButton}"
+                            Margin="0,0,10,0" />
+                    <Button Content="Save"
+                            Command="{Binding SaveProfileCommand}"
+                            Style="{StaticResource MaterialDesignRaisedButton}" />
+                </StackPanel>
+            </StackPanel>
+        </materialDesign:DialogHost.DialogContent>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="420" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ══ Left Pane: Network Profiles ══ -->
+            <Border Grid.Column="0" Background="{DynamicResource MaterialDesignCardBackground}" Margin="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Network Profiles"
+                                   Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                                   VerticalAlignment="Center" />
+                        <ToggleButton x:Name="ThemeToggle"
+                                      Grid.Column="1"
+                                      Click="ThemeToggle_Click"
+                                      IsChecked="True"
+                                      ToolTip="Toggle Dark / Light Mode"
+                                      Style="{StaticResource MaterialDesignSwitchToggleButton}" />
+                    </Grid>
+
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Profiles}"
+                             SelectedItem="{Binding SelectedProfile}"
+                             Margin="10">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Width="240" Margin="0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Status indicator dot -->
+                                    <Ellipse Grid.Column="0" Width="10" Height="10"
+                                             Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="Gray" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Listening">
+                                                        <Setter Property="Fill" Value="LimeGreen" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Failed">
+                                                        <Setter Property="Fill" Value="Red" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" />
+                                        <TextBlock Text="{Binding MulticastAddress, StringFormat={}{0}}" FontSize="10" Opacity="0.7" />
+                                        <TextBlock Text="{Binding Port, StringFormat=Port: {0}}" FontSize="10" Opacity="0.5" />
+                                    </StackPanel>
+
+                                    <Button Grid.Column="2"
+                                            Command="{Binding DataContext.EditProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                            Width="24" Height="24" Padding="0" Margin="2,0">
+                                        <materialDesign:PackIcon Kind="Pencil" Width="14" Height="14" />
+                                    </Button>
+                                    <Button Grid.Column="3"
+                                            Command="{Binding DataContext.DeleteProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                            Width="24" Height="24" Padding="0" Margin="2,0"
+                                            Foreground="IndianRed">
+                                        <materialDesign:PackIcon Kind="Delete" Width="14" Height="14" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <StackPanel Grid.Row="2" Orientation="Vertical">
+                        <Button Content="Disconnect"
+                                Command="{Binding DisconnectCommand}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Margin="10,0,10,5" />
+                        <Button Content="Add Profile"
+                                Command="{Binding AddProfileCommand}"
+                                Style="{StaticResource MaterialDesignRaisedButton}"
+                                Margin="10,0,10,10" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch" Background="Transparent" />
+
+            <!-- ══ Middle Pane: PDU Traffic Tabs ══ -->
+            <Border Grid.Column="2" Background="{DynamicResource MaterialDesignCardBackground}" Margin="0,10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Margin="10" HorizontalAlignment="Right">
+                        <Button Command="{Binding AddSessionCommand}"
+                                Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
+                                ToolTip="Add New Session Tab"
+                                Width="30" Height="30">
+                            <materialDesign:PackIcon Kind="Plus" />
+                        </Button>
+                    </StackPanel>
+
+                    <TabControl Grid.Row="1"
+                                ItemsSource="{Binding Sessions}"
+                                SelectedItem="{Binding SelectedSession}"
+                                Margin="0,5,0,0"
+                                SelectionChanged="TabControl_SelectionChanged">
+                        <TabControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox Text="{Binding Header, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="Transparent" BorderThickness="0"
+                                             VerticalAlignment="Center" Margin="0,0,8,0"
+                                             Foreground="{DynamicResource MaterialDesignBody}" />
+                                    <Button Command="{Binding DataContext.CloseSessionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                            Width="20" Height="20" Padding="0">
+                                        <materialDesign:PackIcon Kind="Close" Width="12" Height="12" />
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TabControl.ItemTemplate>
+                        <TabControl.ContentTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Filter Bar -->
+                                    <WrapPanel Grid.Row="0" Margin="5" Orientation="Horizontal">
+                                        <TextBox materialDesign:HintAssist.Hint="Exercise ID (0 = any)"
+                                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                                 Text="{Binding TargetExerciseId, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="120" Margin="8,0,8,10" />
+                                        <ComboBox materialDesign:HintAssist.Hint="PDU Type"
+                                                  Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                                                  SelectedItem="{Binding TargetPduType}"
+                                                  Width="140" Margin="8,0,8,10">
+                                            <ComboBoxItem>Any</ComboBoxItem>
+                                            <ComboBoxItem>Entity State</ComboBoxItem>
+                                            <ComboBoxItem>Fire</ComboBoxItem>
+                                            <ComboBoxItem>Detonation</ComboBoxItem>
+                                            <ComboBoxItem>Collision</ComboBoxItem>
+                                            <ComboBoxItem>Create Entity</ComboBoxItem>
+                                            <ComboBoxItem>Remove Entity</ComboBoxItem>
+                                            <ComboBoxItem>Electromagnetic Emissions</ComboBoxItem>
+                                            <ComboBoxItem>Designator</ComboBoxItem>
+                                            <ComboBoxItem>Comment</ComboBoxItem>
+                                            <ComboBoxItem>Event Report</ComboBoxItem>
+                                        </ComboBox>
+                                        <TextBox materialDesign:HintAssist.Hint="Entity ID (Site.App.Entity)"
+                                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                                 Text="{Binding TargetEntityId, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="160" Margin="8,0,8,10" />
+                                        <TextBox materialDesign:HintAssist.Hint="Regex Filter (Payload)"
+                                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                                 Text="{Binding TargetRegexFilter, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="150" Margin="8,0,8,10" />
+
+                                        <Button Command="{Binding ClearFilterCommand}"
+                                                Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                                ToolTip="Clear All Filters" Margin="0,4,8,10">
+                                            <materialDesign:PackIcon Kind="FilterRemoveOutline" />
+                                        </Button>
+
+                                        <ToggleButton IsChecked="{Binding IsPaused, Mode=OneWay}"
+                                                      Command="{Binding TogglePauseCommand}"
+                                                      Margin="0,4,8,10">
+                                            <ToggleButton.Style>
+                                                <Style TargetType="ToggleButton" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                                                    <Setter Property="Content" Value="Pause"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                                            <Setter Property="Content" Value="Resume"/>
+                                                            <Setter Property="Background" Value="Orange"/>
+                                                            <Setter Property="BorderBrush" Value="Orange"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ToggleButton.Style>
+                                        </ToggleButton>
+
+                                        <Button Command="{Binding ClearPdusCommand}"
+                                                Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                                ToolTip="Clear PDU List" Margin="0,4,8,10">
+                                            <materialDesign:PackIcon Kind="TrashCanOutline" />
+                                        </Button>
+                                    </WrapPanel>
+
+                                    <!-- PDU Data Grid -->
+                                    <ListView Grid.Row="1"
+                                              ItemsSource="{Binding Pdus}"
+                                              SelectedItem="{Binding SelectedPdu}"
+                                              VirtualizingPanel.IsVirtualizing="True"
+                                              VirtualizingPanel.VirtualizationMode="Recycling"
+                                              Margin="10"
+                                              SelectionChanged="ListView_SelectionChanged">
+                                        <ListView.View>
+                                            <GridView>
+                                                <GridViewColumn Header="Time"
+                                                                DisplayMemberBinding="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}"
+                                                                Width="90" />
+                                                <GridViewColumn Header="PDU Type"
+                                                                DisplayMemberBinding="{Binding PduTypeName}"
+                                                                Width="150" />
+                                                <GridViewColumn Header="Exercise"
+                                                                DisplayMemberBinding="{Binding ExerciseId}"
+                                                                Width="65" />
+                                                <GridViewColumn Header="Entity ID"
+                                                                DisplayMemberBinding="{Binding EntityId}"
+                                                                Width="130" />
+                                                <GridViewColumn Header="Force"
+                                                                DisplayMemberBinding="{Binding ForceId}"
+                                                                Width="80" />
+                                                <GridViewColumn Header="Bytes"
+                                                                DisplayMemberBinding="{Binding Length}"
+                                                                Width="60" />
+                                            </GridView>
+                                        </ListView.View>
+                                    </ListView>
+                                </Grid>
+                            </DataTemplate>
+                        </TabControl.ContentTemplate>
+                    </TabControl>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch" Background="Transparent" />
+
+            <!-- ══ Right Pane: PDU Inspection ══ -->
+            <Border Grid.Column="4" Background="{DynamicResource MaterialDesignCardBackground}" Margin="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="PDU Inspection"
+                                   Style="{StaticResource MaterialDesignHeadline6TextBlock}" />
+                        <Button Grid.Column="1"
+                                Content="Spoof &amp; Re-Broadcast"
+                                Click="RebroadcastButton_Click"
+                                Style="{StaticResource MaterialDesignRaisedButton}"
+                                ToolTip="Re-broadcast the currently selected PDU's raw bytes onto the simulation network" />
+                    </Grid>
+
+                    <!-- AvalonEdit: decoded PDU as formatted JSON -->
+                    <avalonEdit:TextEditor x:Name="PduEditor"
+                                           Grid.Row="1"
+                                           SyntaxHighlighting="JavaScript"
+                                           FontFamily="Consolas"
+                                           FontSize="13"
+                                           IsReadOnly="False"
+                                           ShowLineNumbers="True"
+                                           Margin="10"
+                                           Background="Transparent"
+                                           Foreground="#FFFFFF" />
+
+                    <!-- ScottPlot: PDU/s telemetry -->
+                    <scottplot:WpfPlot x:Name="TelemetryPlot"
+                                       Grid.Row="2"
+                                       Height="150"
+                                       Margin="10,0,10,10" />
+                </Grid>
+            </Border>
+        </Grid>
+    </materialDesign:DialogHost>
+</Window>

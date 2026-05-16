@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="SillyDis.Core/SillyDis.Core.csproj" />
+  <Project Path="SillyDis.UI/SillyDis.UI.csproj" />
+</Solution>
