@@ -108,18 +108,16 @@
     </Style>
 
     <!-- ── Tab item (explicit key — apply to TabControl.ItemContainerStyle) ─── -->
-    <Style x:Key="TacticalTabItemStyle" TargetType="TabItem">
-        <Setter Property="Background" Value="Transparent" />
+    <!-- BasedOn MaterialDesignTabItem to preserve MDIX's ControlTemplate and
+         the ScrollViewer named parts that TabControlScrollbarBehavior depends on. -->
+    <Style x:Key="TacticalTabItemStyle" TargetType="TabItem"
+           BasedOn="{StaticResource MaterialDesignTabItem}">
         <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}" />
         <Setter Property="FontFamily" Value="Consolas, Cascadia Code, Segoe UI" />
         <Setter Property="FontSize" Value="12" />
-        <Setter Property="Padding" Value="12,6" />
-        <Setter Property="BorderThickness" Value="0,0,0,2" />
-        <Setter Property="BorderBrush" Value="Transparent" />
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Foreground" Value="{StaticResource BrushAccentGreen}" />
-                <Setter Property="BorderBrush" Value="{StaticResource BrushAccentGreen}" />
             </Trigger>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}" />
