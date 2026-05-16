@@ -280,7 +280,7 @@
                                                           Command="{Binding TogglePauseCommand}"
                                                           Margin="4,4,4,6" Padding="10,4">
                                                 <ToggleButton.Style>
-                                                    <Style TargetType="ToggleButton" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+                                                    <Style TargetType="ToggleButton" BasedOn="{StaticResource MaterialDesignRaisedToggleButton}">
                                                         <Setter Property="Content" Value="⏸ PAUSE" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsPaused}" Value="True">
@@ -293,9 +293,18 @@
                                                 </ToggleButton.Style>
                                             </ToggleButton>
 
-                                            <!-- Pause buffer count chip -->
-                                            <Border Background="#1E2D45" CornerRadius="3" Padding="6,4" Margin="0,4,4,6"
-                                                    Visibility="{Binding IsPaused, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <!-- Pause buffer count chip — shown only when paused -->
+                                            <Border Background="#1E2D45" CornerRadius="3" Padding="6,4" Margin="0,4,4,6">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
                                                 <TextBlock Style="{StaticResource MonoTextStyle}" FontSize="10"
                                                            Foreground="{StaticResource BrushAccentAmber}"
                                                            Text="{Binding PauseBufferCount, StringFormat='buf: {0}'}" />
