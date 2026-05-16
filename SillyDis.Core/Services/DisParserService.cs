@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Text;
 using DISnet;
 using DISnet.DataStreamUtilities;
 using Newtonsoft.Json;
@@ -10,7 +8,7 @@ namespace SillyDis.Core.Services
 {
     /// <summary>
     /// Wraps the OpenDIS (DISnet) library to decode raw UDP byte arrays into PduItem objects.
-    /// Uses reflection on the PDU header to instantiate the correct typed PDU class (DIS v7).
+    /// Populates SISO-resolved names and a pre-computed hex dump on every item.
     /// </summary>
     public static class DisParserService
     {
@@ -18,23 +16,25 @@ namespace SillyDis.Core.Services
         {
             var item = new PduItem
             {
-                RawBytes = bytes,
-                Timestamp = DateTime.Now
+                RawBytes  = bytes,
+                Timestamp = DateTime.Now,
+                HexDump   = PduItem.BuildHexDump(bytes)
             };
 
             if (bytes.Length < 12)
             {
+                item.PduTypeName     = "Unknown";
                 item.FormattedPayload = $"// Packet too short ({bytes.Length} bytes) to be a DIS PDU.";
                 return item;
             }
 
             try
             {
-                // Byte 2 = PDU Type, Byte 1 = Exercise ID (DIS header layout)
+                // DIS header: byte[0]=ProtocolVersion, [1]=ExerciseID, [2]=PDUType
                 item.ExerciseId = bytes[1];
                 item.PduType    = bytes[2];
+                item.PduTypeName = SisoEnumService.ResolvePduType(item.PduType);
 
-                // Unmarshal using OpenDIS DataInputStream
                 object? pdu = item.PduType switch
                 {
                     1  => UnmarshalAs<EntityStatePdu>(bytes),
@@ -49,15 +49,22 @@ namespace SillyDis.Core.Services
                     23 => UnmarshalAs<CommentPdu>(bytes),
                     24 => UnmarshalAs<ElectronicEmissionsPdu>(bytes),
                     25 => UnmarshalAs<DesignatorPdu>(bytes),
-                    26 => null, // TransmitterPdu — add as needed
                     _  => null
                 };
 
+                // Enrich entity-bearing PDUs with SISO-resolved descriptions
                 if (pdu is EntityStatePdu espdu)
                 {
                     var eid = espdu.EntityID;
                     item.EntityId = $"{eid.SimulationAddress.Site}.{eid.SimulationAddress.Application}.{eid.EntityNumber}";
-                    item.ForceId  = espdu.ForceId.ToString();
+
+                    item.ForceId    = espdu.ForceId;
+                    item.ForceIdName = SisoEnumService.ResolveForceId(espdu.ForceId);
+
+                    var et = espdu.EntityType;
+                    item.EntityTypeName = SisoEnumService.ResolveEntityType(
+                        et.EntityKind, et.Domain, et.Country,
+                        et.Category, et.Subcategory, et.Specific, et.Extra);
                 }
                 else if (pdu is FirePdu fire)
                 {
@@ -72,11 +79,11 @@ namespace SillyDis.Core.Services
 
                 item.FormattedPayload = pdu != null
                     ? JsonConvert.SerializeObject(pdu, Formatting.Indented)
-                    : BuildHexDump(bytes);
+                    : item.HexDump;
             }
             catch (Exception ex)
             {
-                item.FormattedPayload = $"// Parse error: {ex.Message}\n{BuildHexDump(bytes)}";
+                item.FormattedPayload = $"// Parse error: {ex.Message}\n{item.HexDump}";
             }
 
             return item;
@@ -88,21 +95,6 @@ namespace SillyDis.Core.Services
             var dis = new DataInputStream(bytes);
             pdu.Unmarshal(dis);
             return pdu;
-        }
-
-        private static string BuildHexDump(byte[] bytes)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine($"// Raw hex dump ({bytes.Length} bytes):");
-            for (int i = 0; i < bytes.Length; i += 16)
-            {
-                sb.Append($"{i:X4}  ");
-                int len = Math.Min(16, bytes.Length - i);
-                for (int j = 0; j < len; j++)
-                    sb.Append($"{bytes[i + j]:X2} ");
-                sb.AppendLine();
-            }
-            return sb.ToString();
         }
     }
 }

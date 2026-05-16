@@ -154,3 +154,15 @@ Contributions, issues, and feature requests are welcome! Feel free to open an is
 ## 📝 License
 
 This project is licensed under the **MIT License**. The bundled OpenDIS source (`SillyDis.Core/OpenDIS/`) is licensed under the **BSD License** — see the original [open-dis/open-dis-csharp](https://github.com/open-dis/open-dis-csharp) repository for details.
+
+---
+
+## 🔭 Future Capabilities
+
+| Feature | Notes |
+|:--------|:------|
+| **Offline / WMS Map Tiles** | Replace OpenStreetMap with a local tile server or WMS endpoint for OPSEC-sensitive environments. Mapsui supports custom tile sources. |
+| **PDU Replay Loop** | Continuously re-broadcast a captured PDU at a configurable interval (equivalent to SillyRabbitMQ's DLQ rescue loop). |
+| **PCAP Import** | Load Wireshark `.pcap` files containing DIS traffic for offline analysis without a live network. |
+| **Entity History Trail** | Draw breadcrumb trails on the tactical map showing an entity's position history. |
+| **Custom SISO Database** | Allow users to point at a local or updated `SISO-REF-010.xml` instead of the embedded version. |
