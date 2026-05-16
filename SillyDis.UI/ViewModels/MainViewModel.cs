@@ -1,10 +1,12 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using SillyDis.Core.Models;
 using SillyDis.Core.Services;
 
@@ -195,6 +197,47 @@ namespace SillyDis.UI.ViewModels
             catch (Exception ex)
             {
                 MessageBox.Show($"Re-broadcast failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // ── Capture Export ────────────────────────────────────────────────────────
+
+        [RelayCommand]
+        private void ExportCapture()
+        {
+            var session = SelectedSession;
+            if (session == null || session.Pdus.Count == 0)
+            {
+                MessageBox.Show("No PDUs captured in the current session.", "Export", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dlg = new SaveFileDialog
+            {
+                Title            = "Export Capture",
+                FileName         = $"SillyDis_{DateTime.Now:yyyyMMdd_HHmmss}",
+                DefaultExt       = ".ndjson",
+                Filter           = "NDJSON — one record per line (*.ndjson)|*.ndjson|JSON array — pretty-printed (*.json)|*.json"
+            };
+
+            if (dlg.ShowDialog() != true) return;
+
+            try
+            {
+                var pdus = session.Pdus.ToList();   // snapshot — avoid collection-modified race
+                if (dlg.FilterIndex == 1)
+                    CaptureExportService.ExportNdjson(pdus, dlg.FileName);
+                else
+                    CaptureExportService.ExportJson(pdus, dlg.FileName);
+
+                var sizeKb = new FileInfo(dlg.FileName).Length / 1024.0;
+                MessageBox.Show(
+                    $"Exported {pdus.Count:N0} PDUs to:\n{dlg.FileName}\n({sizeKb:F1} KB)",
+                    "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Export failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

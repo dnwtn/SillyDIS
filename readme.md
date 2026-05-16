@@ -10,18 +10,25 @@ SillyDis gives simulation engineers a live window into IEEE-1278.1 DIS protocol 
 
 - **Multi-Tabbed Session Architecture** — Run multiple independent capture sessions simultaneously, each with its own filter configuration and PDU stream.
 - **UDP Multicast Listener** — Join any multicast group (or bind to unicast/broadcast) on any local network interface with zero configuration overhead.
+- **NIC Auto-Enumeration** — Local interfaces are enumerated at runtime; selecting one auto-fills the binding IP address — no manual entry required.
 - **DIS PDU Decoding (IEEE-1278.1 v7)** — Powered by the [OpenDIS CSharpDis7](https://github.com/open-dis/open-dis-csharp) library. Automatically decodes Entity State, Fire, Detonation, Collision, Create/Remove Entity, Electromagnetic Emissions, Designator, Comment, Event Report, and more.
+- **SISO-REF-010 Entity Resolution** — Embedded SISO enumerations XML resolves raw entity type tuples (kind·domain·country·category…) to human-readable platform names (e.g. `M1A2 Abrams`) and force affiliations (`Friendly` / `Opposing` / `Neutral`) in every grid row.
 - **Layered Traffic Filtering:**
-  - **Exercise ID** — Isolate a specific exercise on a shared network.
+  - **Exercise ID** — Editable dropdown auto-populated from observed traffic; isolate a specific exercise on a shared network without typing.
   - **PDU Type** — Focus on a single PDU family (e.g., only `Entity State` or `Fire` PDUs).
   - **Entity ID** — Filter to a specific entity by `Site.Application.Entity` notation.
   - **Regex Filter** — Apply regular expressions against the decoded JSON payload body for deep content inspection.
+- **High-Throughput Channel Pipeline** — A `System.Threading.Channels` producer-consumer pipeline decouples the UDP socket from PDU parsing. Packets are queued at up to 50,000 slots (DropOldest back-pressure) so no PDUs are dropped under burst load.
+- **Pause / Resume with Buffering** — Pause the live display without losing data. In **Buffer** mode, incoming PDUs are held in memory (up to a configurable limit) and flushed atomically on resume. In **Drop** mode, incoming PDUs are discarded to save memory.
+- **Hex Dump Inspector** — Every captured PDU exposes a structured hex view (16-byte rows, offset column, ASCII sidebar) alongside the JSON tab.
 - **Intelligent PDU Inspection** — Decoded PDUs are formatted as syntax-highlighted, foldable JSON in an embedded AvalonEdit editor.
-- **Spoof & Re-Broadcast** — Select any captured PDU, edit its decoded fields directly in the editor, and re-broadcast the modified PDU back onto the simulation network multicast group. Ideal for simulation replay, fault injection, and DIS protocol testing.
-- **Real-Time Telemetry** — Live PDU/second throughput graph powered by ScottPlot with a 60-second rolling window.
-- **Hex Dump Fallback** — Unknown or malformed PDU types display a structured hex dump instead of crashing.
-- **Profile Management** — Save named network configurations (multicast address, port, local NIC) to disk. Profiles persist across sessions.
-- **Dark / Light Mode** — Toggle between Material Design 3 Dark and Light themes at runtime.
+- **Spoof & Re-Broadcast** — Select any captured PDU, edit its decoded fields directly in the editor, and re-broadcast the modified PDU back onto the simulation network multicast group.
+- **Capture Export** — Export the current session's PDU list to **NDJSON** (one record per line — grep-able, `jq`-compatible) or a pretty-printed **JSON array**. Exported files include ISO-8601 timestamps, all SISO-resolved fields, and Base64-encoded raw bytes for later replay.
+- **Tactical 2D Map** — Live entity positions plotted on an OpenStreetMap tile layer via Mapsui. ECEF geocentric coordinates (from EntityStatePdu) are converted to WGS-84 geodetic using the Bowring iterative method. Entities are symbolized by force affiliation (blue / red / green / grey) and fade to 35% opacity when stale (no ESPDU received for >5 s).
+- **Real-Time Telemetry** — Multi-series ScottPlot chart showing total PDU/second throughput plus a colour-coded signal per live PDU type, with a 60-second rolling window.
+- **Exercise ID Auto-Discovery** — The Exercise ID filter bar is an editable ComboBox that populates automatically as unique exercise IDs are observed in live traffic.
+- **Profile Management** — Save named network configurations (multicast address, port, local NIC IP) to disk. Profiles persist across sessions.
+- **Terminal Tactical Theme** — Deep navy (`#0A0E1A`) background, `#00FF88` active-green accents, amber pause indicators, red drop counters, and Consolas monospaced fonts throughout ID and hex fields.
 
 ---
 
@@ -62,27 +69,38 @@ SillyDis gives simulation engineers a live window into IEEE-1278.1 DIS protocol 
 SillyDIS/
 ├── SillyDis.slnx
 │
-├── SillyDis.Core/                  # Platform-agnostic core
+├── SillyDis.Core/                    # Platform-agnostic core
 │   ├── Models/
-│   │   ├── NetworkProfile.cs       # Multicast connection config
-│   │   └── PduItem.cs              # Captured + decoded PDU
+│   │   ├── EntityTrack.cs            # Live entity position + force for tactical map
+│   │   ├── NetworkProfile.cs         # Multicast connection config
+│   │   ├── NicInfo.cs                # Network interface record
+│   │   └── PduItem.cs                # Captured + decoded PDU (SISO-enriched, hex dump)
 │   ├── Services/
-│   │   ├── IUdpNetworkService.cs   # Service abstraction
-│   │   ├── UdpNetworkService.cs    # UDP socket + multicast join
-│   │   ├── DisParserService.cs     # OpenDIS decode bridge
-│   │   └── ProfileManager.cs      # Profile load/save
-│   ├── OpenDIS/                    # CSharpDis7 source (174 PDU classes)
-│   │   └── DataStreamUtilities/   # DataInputStream / DataOutputStream
-│   └── GlobalUsings.cs             # Namespace shim (DISnet → OpenDis.Core)
+│   │   ├── CaptureExportService.cs   # NDJSON / JSON export
+│   │   ├── CoordinateConverter.cs    # ECEF → WGS-84 geodetic (Bowring) + Mercator
+│   │   ├── DisParserService.cs       # OpenDIS decode bridge + SISO enrichment
+│   │   ├── IUdpNetworkService.cs     # Service abstraction
+│   │   ├── NetworkInterfaceService.cs# Runtime NIC enumeration
+│   │   ├── ProfileManager.cs         # Profile load/save
+│   │   ├── SisoEnumService.cs        # SISO-REF-010 XML parser + entity type resolver
+│   │   └── UdpNetworkService.cs      # Channel<byte[]> producer-consumer pipeline
+│   ├── Resources/
+│   │   └── SISO-REF-010.xml          # Embedded enumeration database (6 MB)
+│   └── OpenDIS/                      # CSharpDis7 source (174 PDU classes)
+│       └── DataStreamUtilities/
 │
-└── SillyDis.UI/                    # WPF presentation layer
+└── SillyDis.UI/                      # WPF presentation layer
     ├── ViewModels/
-    │   ├── MainViewModel.cs        # Root VM — profiles, sessions, connect
-    │   └── SimulationSession.cs    # Per-tab VM — filters, PDU list, telemetry
+    │   ├── MainViewModel.cs           # Root VM — profiles, sessions, connect, export
+    │   └── SimulationSession.cs       # Per-tab VM — filters, PDU list, entity tracking,
+    │                                  #   pause buffer, auto-discovery, telemetry histories
     ├── Helpers/
-    │   └── BraceFoldingStrategy.cs # AvalonEdit JSON folding
-    ├── App.xaml / App.xaml.cs      # DI container wiring
-    └── MainWindow.xaml / .cs       # 3-pane UI + ScottPlot + AvalonEdit
+    │   ├── BraceFoldingStrategy.cs    # AvalonEdit JSON folding
+    │   └── EntityMapLayer.cs          # Mapsui MemoryLayer synced to EntityTrack collection
+    ├── Themes/
+    │   └── TerminalTheme.xaml         # Deep-navy tactical color palette + component styles
+    ├── App.xaml / App.xaml.cs         # DI container wiring + dark theme bootstrap
+    └── MainWindow.xaml / .cs          # 3-pane UI: profiles · traffic+map · inspector
 ```
 
 ---

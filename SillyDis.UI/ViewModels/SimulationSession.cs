@@ -46,6 +46,20 @@ namespace SillyDis.UI.ViewModels
         [ObservableProperty] private ObservableCollection<PduItem> _pdus = new();
         [ObservableProperty] private PduItem? _selectedPdu;
 
+        // ── Exercise ID Auto-Discovery ────────────────────────────────────────
+
+        /// <summary>
+        /// Sorted set of every unique Exercise ID observed in live traffic.
+        /// Bound to the Exercise ID ComboBox in the filter bar so users never
+        /// have to type an ID by hand.
+        /// </summary>
+        public ObservableCollection<byte> ObservedExerciseIds { get; } = new();
+        private readonly HashSet<byte> _seenExerciseIds = new();
+
+        // ── Dropped packet pass-through (from network service) ────────────────
+
+        public long DroppedPacketCount => _networkService.DroppedPacketCount;
+
         // ── Pause / Buffer ────────────────────────────────────────────────────
 
         public enum PauseModeOption { Drop, Buffer }
@@ -133,6 +147,8 @@ namespace SillyDis.UI.ViewModels
             IsPaused          = false;
             _pauseBuffer.Clear();
             PauseBufferCount  = 0;
+            _seenExerciseIds.Clear();
+            ObservedExerciseIds.Clear();
         }
 
         // ── PDU Ingestion ─────────────────────────────────────────────────────
@@ -154,6 +170,18 @@ namespace SillyDis.UI.ViewModels
             // Always update entity tracking for ESPDUs (even when paused)
             if (pdu.PduType == 1 && !string.IsNullOrEmpty(pdu.EntityId))
                 UpdateEntityTrack(pdu);
+
+            // Auto-discover exercise IDs — add any new ID to the sorted observable list
+            if (_seenExerciseIds.Add(pdu.ExerciseId))
+            {
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    // Insert sorted
+                    int i = 0;
+                    while (i < ObservedExerciseIds.Count && ObservedExerciseIds[i] < pdu.ExerciseId) i++;
+                    ObservedExerciseIds.Insert(i, pdu.ExerciseId);
+                });
+            }
 
             // Apply filters
             if (!PassesFilters(pdu)) return;

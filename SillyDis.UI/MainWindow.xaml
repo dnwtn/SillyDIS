@@ -185,6 +185,15 @@
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="8,6"
                                 HorizontalAlignment="Right">
+                        <!-- Export Capture -->
+                        <Button Command="{Binding DataContext.ExportCaptureCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Foreground="{StaticResource BrushAccentGreen}"
+                                BorderBrush="{StaticResource BrushAccentGreen}"
+                                FontFamily="Consolas" FontSize="11" FontWeight="Bold"
+                                ToolTip="Export capture to NDJSON / JSON"
+                                Content="⬇ EXPORT" Margin="0,0,8,0" />
+                        <!-- Add Session -->
                         <Button Command="{Binding AddSessionCommand}"
                                 Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
                                 Background="{StaticResource BrushAccentGreen}" Foreground="#0A0E1A"
@@ -228,10 +237,13 @@
                                     <!-- Filter bar -->
                                     <Border Grid.Row="0" Background="#0A0E1A" Padding="6,4">
                                         <WrapPanel Orientation="Horizontal">
-                                            <TextBox materialDesign:HintAssist.Hint="Exercise ID (0=any)"
-                                                     Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                                                     Text="{Binding TargetExerciseId, UpdateSourceTrigger=PropertyChanged}"
-                                                     FontFamily="Consolas" Width="110" Margin="4,0,4,6" />
+                                            <!-- Exercise ID: editable ComboBox auto-populated from live traffic -->
+                                            <ComboBox materialDesign:HintAssist.Hint="Ex ID (0=any)"
+                                                      Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                                                      IsEditable="True"
+                                                      Text="{Binding TargetExerciseId, UpdateSourceTrigger=PropertyChanged}"
+                                                      ItemsSource="{Binding ObservedExerciseIds}"
+                                                      FontFamily="Consolas" Width="130" Margin="4,0,4,6" />
                                             <ComboBox materialDesign:HintAssist.Hint="PDU Type"
                                                       Style="{StaticResource MaterialDesignFloatingHintComboBox}"
                                                       SelectedItem="{Binding TargetPduType}"
